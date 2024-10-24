@@ -5,6 +5,7 @@ import (
 	"net"
 	"net/http"
 
+	"github.com/charmbracelet/log"
 	"go.uber.org/fx"
 )
 
@@ -16,7 +17,7 @@ var WithHttp = fx.Provide(
 	),
 )
 
-func newHttpServer(lc fx.Lifecycle, mux *http.ServeMux) *http.Server {
+func newHttpServer(lc fx.Lifecycle, mux *http.ServeMux, logger *log.Logger) *http.Server {
 	s := &http.Server{Addr: ":8080", Handler: mux}
 
 	lc.Append(fx.Hook{
@@ -27,6 +28,8 @@ func newHttpServer(lc fx.Lifecycle, mux *http.ServeMux) *http.Server {
 			}
 
 			go s.Serve(ln)
+			logger.Info("started http server", "addr", s.Addr)
+
 			return nil
 		},
 		OnStop: func(ctx context.Context) error {
@@ -37,9 +40,12 @@ func newHttpServer(lc fx.Lifecycle, mux *http.ServeMux) *http.Server {
 	return s
 }
 
-func newServeMux(routes []Route) *http.ServeMux {
+func newServeMux(routes []Route, logger *log.Logger) *http.ServeMux {
+	logger = logger.WithPrefix("routing")
+
 	mux := http.NewServeMux()
 	for _, route := range routes {
+		logger.Debug("adding route", "from", route.Pattern(), "to", route)
 		mux.Handle(route.Pattern(), route)
 	}
 	return mux

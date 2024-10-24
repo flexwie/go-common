@@ -12,8 +12,24 @@ type logger struct {
 	Logger *log.Logger
 }
 
+func WithLoggerFactory(level log.Level) fx.Option {
+	return fx.Provide(
+		NewLoggerFactory(level),
+	)
+}
+
 var WithLogger = fx.Provide(NewLogger)
 var WithFxLogger = fx.WithLogger(NewFxLogger)
+
+func NewLoggerFactory(level log.Level) func() *log.Logger {
+	return func() *log.Logger {
+		logger := log.New(os.Stdout)
+
+		logger.SetLevel(level)
+
+		return logger
+	}
+}
 
 func NewLogger() *log.Logger {
 	logger := log.New(os.Stdout)
@@ -36,9 +52,9 @@ func (l *logger) LogEvent(ev fxevent.Event) {
 			l.Logger.Debug("initialized logger")
 		}
 	case *fxevent.Provided:
-		l.Logger.Info("provided", "ctor", v.ConstructorName, "module", v.ModuleName, "err", v.Err)
+		l.Logger.Debug("provided", "ctor", v.ConstructorName, "module", v.ModuleName, "err", v.Err)
 	case *fxevent.Decorated:
-		l.Logger.Info("decorated", "decorator", v.DecoratorName, "module", v.ModuleName, "err", v.Err)
+		l.Logger.Debug("decorated", "decorator", v.DecoratorName, "module", v.ModuleName, "err", v.Err)
 	case *fxevent.Invoking:
 		l.Logger.Debug("invoking", "fn", v.FunctionName, "module", v.ModuleName)
 	case *fxevent.Invoked:
@@ -66,6 +82,6 @@ func (l *logger) LogEvent(ev fxevent.Event) {
 	case *fxevent.Stopped:
 		l.Logger.Info("stopped", "err", v.Err)
 	default:
-		l.Logger.Debug("unknown event", "obj", v)
+		l.Logger.Debug("unknown event", "event", v, "obj", v)
 	}
 }
